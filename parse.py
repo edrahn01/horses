@@ -19,10 +19,9 @@ def text_file(chart):
     return '/'.join(['charts', 'texts', chart])+'.txt'
 
 def open_text_file(file_name):
-    f = open(file_name,  'r')
-    t = f.read()
-    races = t.split('\x0c')
-
+    with open(file_name,  'r') as f:
+        t = f.read()
+        races = t.split('\x0c')
     return races
 
 class FileNotExist(Exception):
@@ -61,6 +60,7 @@ def all_files(what=None):
     
     if what == 'texts':
         for text_file in (Path('charts') / 'texts').iterdir():
+            print(text_file)
             yield text_file
 
 
@@ -134,9 +134,7 @@ def chart(file_name):
             race_info['entries'] = html_entries
 
             yield race_info
-        except:
-            print(f"Failed parseing {file_name}-{i}")
+        except Exception as exc:
+            print(exc)
+            print(f"Failed parseing {file_name}")
 #            raise
-        else:
-            i += 1
-

@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, ForeignKey
+from sqlalchemy import create_engine, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String
@@ -35,26 +35,6 @@ class Track(Base):
     def __repr__(self):
         return "%s(%s)/%s"%(self.name, self.abv, self.country)
 
-class Horse(Base):
-    __tablename__ = 'horse'
-
-    id = Column(Integer, primary_key=True)
-
-    name = Column(String, nullable=False)
-    country = Column(String, default='US', nullable=False)
-
-    __table_args__ = (UniqueConstraint('name', 'country', name='unique_horse'),)
-
-
-class Jockey(Base):
-    __tablename__ = 'jockey'
-
-    id = Column(Integer, primary_key=True)
-
-    name = Column(String)
-
-    __table_args__ = (UniqueConstraint('name', name='unique_jockey'),)
-
 class Race(Base):
     __tablename__ = 'race'
 
@@ -85,6 +65,7 @@ class Race(Base):
 #    start = Column(Integer)
 
     entries = relationship('RaceEntry', back_populates="race")
+    result = relationship('RaceResult', back_populates="race")
 
     def __repr__(self):
         return "%s - %s - %s"%(self.track, self.date, self.race_number)
@@ -102,7 +83,9 @@ class RaceEntry(Base):
 
     pgmn = Column(String)
 
+    horse_id = Column(Integer, ForeignKey('horse.id'))
     horse = relationship('Horse', back_populates="entries")
+    jockey_id = Column(Integer, ForeignKey('jockey.id'))
     jockey = relationship('Jockey', back_populates="entries")
    
     weight = Column(Integer)
@@ -113,7 +96,39 @@ class RaceEntry(Base):
     result = relationship('RaceEntryResult', back_populates="race_entry")
 
     def __repr__(self):
-        return "%s (%s)"%(self.horse_name, self.jockey_name)
+        return "%s-%s (%s)"%(self.pgmn, self.horse.name, self.jockey.name)
+
+class Horse(Base):
+    __tablename__ = 'horse'
+
+    id = Column(Integer, primary_key=True)
+
+    name = Column(String, nullable=False)
+    country = Column(String, default='US', nullable=False)
+
+    entries = relationship('RaceEntry', back_populates="horse")
+
+    __table_args__ = (UniqueConstraint('name', 'country', name='unique_horse'),)
+
+    def __repr__(self):
+        return "%s(%s)"%(self.name, self.country)
+
+
+class Jockey(Base):
+    __tablename__ = 'jockey'
+
+    id = Column(Integer, primary_key=True)
+
+    name = Column(String)
+
+    entries = relationship('RaceEntry', back_populates="jockey")
+
+    __table_args__ = (UniqueConstraint('name', name='unique_jockey'),)
+
+    def __repr__(self):
+        return "%s"%(self.name)
+
+
 
 class RaceEntryResult(Base):
     __tablename__ = 'race_entry_result'
@@ -151,3 +166,61 @@ class RaceEntryResult(Base):
 
     fin_pos = Column(Integer)
     fin_behind = Column(Integer)
+
+    def __repr__(self):
+        _str = ""
+        if self.quick_pos:
+            _str += "3/16=%s,%s "%(self.quick_pos, self.quick_behind)
+        if self.quart_pos:
+            _str += "1/4=%s,%s "%(self.quart_pos, self.quart_behind)
+        if self.quack_pos:
+            _str += "3/8=%s,%s "%(self.quack_pos, self.quack_behind)
+        if self.half_pos:
+            _str += "1/2=%s,%s "%(self.half_pos, self.half_behind)
+        if self.last_quart_pos:
+            _str += "3/4=%s,%s "%(self.last_quart_pos, 
+                    self.last_quart_behind)
+        if self.mile_pos:
+            _str += "1=%s,%s "%(self.mile_pos, self.mile_behind)
+        if self.mile_frth_pos:
+            _str += "1 1/4=%s,%s "%(self.mile_frth_pos, 
+                    self.mile_frth_behind)
+        if self.str_pos:
+            _str += "Str=%s,%s "%(self.str_pos, self.str_behind)
+        if self.fin_pos:
+            _str += "Fin=%s,%s "%(self.fin_pos, self.fin_behind)
+
+        return _str
+
+
+class RaceResult(Base):
+    __tablename__ = 'race_result'
+
+    id = Column(Integer, primary_key=True)
+
+    race_id = Column(Integer, ForeignKey('race.id'))
+    race = relationship('Race', back_populates="result")
+
+    first_call = Column(Integer)
+    second_call = Column(Integer)
+    third_call = Column(Integer)
+    fourth_call = Column(Integer)
+    fifth_call = Column(Integer)
+    final_call = Column(Integer)
+
+    def __repr__(self):
+        _str = ""
+        if self.first_call:
+            _str += "1st=%s "%(self.first_call)
+        if self.second_call:
+            _str += "2nd=%s "%(self.second_call)
+        if self.third_call:
+            _str += "3rd=%s "%(self.third_call)
+        if self.fourth_call:
+            _str += "4th=%s "%(self.fourth_call)
+        if self.fifth_call:
+            _str += "5th=%s "%(self.fifth_call)
+        if self.final_call:
+            _str += "final=%s "%(self.final_call)
+
+        return _str

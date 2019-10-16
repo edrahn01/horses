@@ -4,12 +4,12 @@ from csv import DictReader
 
 import parse
 
-from objects import Race, Track, Session, setup_db, RaceEntry, RaceEntryResult
+from objects import Race, Track, Session, setup_db, RaceEntry, RaceEntryResult, Horse, Jockey, RaceResult
+from sqlalchemy.exc import IntegrityError
 
 
 
 if __name__ == '__main__':
-#    setup_db()
     session = Session()
 
     if 'tracks' in sys.argv:
@@ -33,7 +33,8 @@ if __name__ == '__main__':
         for file_name in files:
             races = parse.chart(file_name)
             for race in races:
-                track = session.query(Track).filter(Track.name==race['track_name']).one()
+                track = (session.query(Track)
+                        .filter(Track.name==race['track_name']).one())
                 race_db = Race(date=race['date'],
                         race_number=race['race_number'],
                         race_type=race['race_type'],
@@ -55,34 +56,50 @@ if __name__ == '__main__':
 #                        start=race['start'])
                 session.add(race_db)
                 session.commit()
+                print(race_db)
 
                 for entry in race['entries']:
-                    print(entry)
                     try:
                         horse = Horse(name=entry['horse_name'],
                                 country=entry['horse_country'])
                         session.add(horse)
-                        session.commit()
-                    except:
+                        session.flush()
+                    except IntegrityError:
+                        def get_default_country(country):
+                            if not country:
+                                return 'US'
+                            else:
+                                return country
+                        session.rollback()
                         horse = (session.query(Horse)
                                 .filter_by(name=entry['horse_name'],
-                                    country=entry['horse_country'])
+                                    country=get_default_country(entry['horse_country']))
                                 .one())
                         print(horse)
-                        raise
+
+                    try:
+                        jockey = Jockey(name=entry['jockey_name'])
+                        session.add(jockey)
+                        session.flush()
+                    except IntegrityError:
+                        session.rollback()
+                        jockey = (session.query(Jockey)
+                                .filter_by(name=entry['jockey_name'])
+                                .one())
+                        print(jockey)
 
                     entry_db = RaceEntry(race=race_db,
                             last_raced=entry['last_raced'],
                             track_raced=entry['track_raced'],
                             pgmn=entry['pgm'],
-                            horse_name=entry['horse_name'],
-                            horse_country=entry['horse_country'],
-                            jockey_name=entry['jockey_name'],
+                            horse=horse,
+                            jockey=jockey,
                             weight=entry['weight'],
                             m_e=entry['m_e'],
                             pp=entry['pp'])
                     session.add(entry_db)
-                    session.commit()
+                    session.flush()
+                    print(entry_db)
 
                     entry_result_db = RaceEntryResult(race_entry=entry_db,
                             start=entry['start'])
@@ -105,4 +122,18 @@ if __name__ == '__main__':
 
                     session.add(entry_result_db)
                     session.commit()
+                    print(entry_result_db)
 
+                print(race['fract_times']) 
+                race_result_db = RaceResult(race=race_db)
+                args = ['first', 'second', 'third', 'fourth',
+                        'fifth']
+                for time, arg in zip(race['fract_times'], args):
+                    if time:
+                        setattr(race_result_db, '%s_call'%(arg), time)
+                print(race['final_time'])
+                race_result_db.final_call = race['final_time']
+                session.add(race_result_db)
+                session.flush()
+
+                print(race_result_db)

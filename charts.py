@@ -142,7 +142,7 @@ class Age:
         for k, v in self.AGE.items():
             k = k.replace(' ', '\s+')
             AGES[k] = v
-        m, race = lift_regex(r'(%s)'%('|'.join(AGES.keys())), race, re.M)
+        m, race = lift_regex(r'(%s) '%('|'.join(AGES.keys())), race, re.M)
         if m:
             AGE = re.sub('\s+', ' ', m.group(1))
             age = self.AGE[AGE]
@@ -156,7 +156,7 @@ class Age:
 
 class Desc:
     def match(self, race):
-        m, race = lift_regex(r'(FOR|A .*?\.) ', race, re.S|re.M)
+        m, race = lift_regex(r'(FOR.*?\.) ', race, re.S|re.M)
         if m:
             race_desc = m.group(1)
             race_desc = re.sub(r'\s', ' ', race_desc)
@@ -215,26 +215,100 @@ class Desc2:
         return {'desc2': desc2}
 
 class Info2:
-    DISTANCE = {'Five And One Half Furlongs': 0,
-            'Six Furlongs': 1,
-            'Six And One Half Furlongs': 2,
-            'Mile And Seventy Yards': 3,
-            'One Mile And Seventy Yards': 4}
-    SURFACE = {'Dirt': 0}
+    DISTANCE = {'Furlongs': 1,
+            'One Hundred And Ten Yards': 2,
+            'Two Hundred And Fifty Yards': 3,
+            'Three Hundred Yards': 4,
+            'Three Hundred And Thirty Yards': 5,
+            'Three Hundred And Fifty Yards': 6,
+            'Four Hundred Yards': 7,
+            'Eight Hundred And Seventy Yards': 8,
+            'Four Hundred And Forty Yards': 9,
+            'Seven Hundred And Seventy Yards': 10,
+            'Five Furlongs': 11,
+            'Five And One Half Furlongs': 12,
+            'Six Furlongs': 13,
+            'Six And One Half Furlongs': 14,
+            'Seven Furlongs': 15,
+            'One Mile': 16,
+            'Mile': 16,
+            'One Mile And Forty Yards': 17,
+            'Mile And Seventy Yards': 18,
+            'One Mile And Seventy Yards': 18,
+            'One And Three Sixteenth Miles': 19,
+            'One And One Fourth Miles': 20,
+            'One And One Eighth Miles': 21,
+            'One And One Half Miles': 22,
+            'One And Thirteen Sixteenth Miles': 23,
+            'One And Five Eighth Miles': 24,
+            'One And One Sixteenth Miles': 25,
+            'One And Three Eighth Miles': 26,
+            'One And Five Sixteenth Miles': 27}
+    FURLONG_DISTANCE = {1: -1,
+            2: .5,
+            3: 1.14,
+            4: 1.36,
+            5: 1.5,
+            6: 1.59,
+            7: 1.82,
+            8: 3.95,
+            9: 2,
+            10: 3.5,
+            11: 5,
+            12: 5.5,
+            13: 6,
+            14: 6.5,
+            15: 7,
+            16: 8,
+            17: 8.18,
+            18: 8.31,
+            19: 9.5,
+            20: 10,
+            21: 9,
+            22: 12,
+            23: 13.5,
+            24: 12,
+            25: 8.5,
+            26: 11,
+            27: 10.5}
+    SURFACE = {'Dirt': 0,
+            'Inner turf': 1,
+            'Outer turf': 2,
+            'All Weather Track': 3,
+            'Turf': 4,}
     def match(self, race): 
-        m, race = lift_regex(r'(%s) On The (%s) Track Record: \((.*?)\)'%('|'.join(self.DISTANCE.keys()), '|'.join(self.SURFACE.keys())), race)
+        race = re.sub(r' - Originally Scheduled .*?(?= Track)', '', race)
+        m, race = lift_regex(r'(?=(^About ))', race)
+        if m:
+            print(m)
+            about = m.group(1) and True or False
+        else:
+            about = None
+
+        m, race = lift_regex(r'(%s) On The (%s)'%('|'.join(self.DISTANCE.keys()), '|'.join(self.SURFACE.keys())), race, re.M | re.S)
         if m:
             distance = self.DISTANCE[m.group(1)]
             surface = self.SURFACE[m.group(2)]
-            track_record = m.group(3)
         else:
+            about = None
             distance = None
             surface = None
+            track_record = None
+            line = re.match(r'^.*?On The.*?\)$', race)
+            if line is None:
+                line = race[:1000]
+            raise NoMatch(line)
+
+        m, race = lift_regex(r'(?= Track Record: \((.*?)\))$', race)
+        if m:
+            track_record = m.group(1)
+        else:
             track_record = None
 
         self.race = race
 
-        return {'distance': distance,
+        return {'about': about,
+                'distance': distance,
                 'surface': surface,
                 'track_record': track_record}
 
@@ -381,7 +455,7 @@ class FinalTime:
         m, race = lift_regex(r'Final Time: ([0-9:\.]+)\n\n', race)
 
         if m:
-            final_time = m.group(1)
+            final_time = convert_time(m.group(1))
         else:
             final_time = None
 
@@ -517,6 +591,14 @@ class Entries:
 
         return {'entries': entries}
 
+def convert_time(time):
+    if ':' in time:
+        time = time.split(':')
+        if time[1]:
+            time = float(time[1])+int(time[0])*60
+    return time
+
+
 class FractionalTime:
     def match(self, race):
         m, race = lift_regex(r'Fractional Times: ([0-9.: ]+)\n', race)
@@ -524,8 +606,8 @@ class FractionalTime:
         fractional_times = []
         if m:
             for fract in m.group(1).split(' '):
-                fractional_times.append(fract)
-
+                time = convert_time(fract)
+                fractional_times.append(time)
         self.race = race
 
         return {'fract_times': fractional_times}
@@ -608,7 +690,6 @@ class EntriesHTML:
             if 'Last&#160;Raced' in race:
                 i += 1
                 m = re.match(r'<p .*?>(.*?)</p>', r[i])
-                
                 if m:
                     if m.group(1) == '---':
                         info = {'last_raced': None,
@@ -641,7 +722,7 @@ class EntriesHTML:
                     horse = m.group(1)
                     # I have no idea what this is..
                     if not '&#160;(' in horse:
-                        i += 1
+                        i -= 1
                         m = re.match(r'<p .*?>(.*?)</p>', r[i])
                         print(f"Horse skipped by {horse} {m.group(1)}")
                         horse = m.group(1)
@@ -654,8 +735,8 @@ class EntriesHTML:
                         entries[h]['horse_country'] = None
                     horse, jockey = horse.split('&#160;(')
                     jockey = jockey[:-1]
-                    entries[h]['horse_name'] = cleanup_spaces(horse)
-                    entries[h]['jockey_name'] = cleanup_spaces(jockey)
+                    entries[h]['horse_name'] = cleanup_spaces(horse).strip()
+                    entries[h]['jockey_name'] = cleanup_spaces(jockey).strip()
                     
             if 'Wgt&#160;M/E&#160;' in race:
                 i += 1
@@ -740,7 +821,6 @@ class EntriesHTML:
                     if m:
                         ft = m.group(1)
                         pos = m.group(2)
-
                         if pos == '---':
                             pos = None
 
@@ -758,6 +838,8 @@ class EntriesHTML:
                                 i -= 1
 
                         info[name] = (pos, get_behind(behind))
+
+
                     else:
                         raise NoMatch(r[i])
 
