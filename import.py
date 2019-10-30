@@ -43,6 +43,7 @@ if __name__ == '__main__':
                         sex=race['sex'],
                         age=race['age'],
                         surface=race['surface'],
+                        distance=race['distance'],
                         desc=race['race_desc'],
                         code=race['desc2'],
                         claiming_price=race['claiming_price'],
@@ -64,6 +65,7 @@ if __name__ == '__main__':
                                 country=entry['horse_country'])
                         session.add(horse)
                         session.flush()
+                        print(horse)
                     except IntegrityError:
                         def get_default_country(country):
                             if not country:
@@ -75,18 +77,17 @@ if __name__ == '__main__':
                                 .filter_by(name=entry['horse_name'],
                                     country=get_default_country(entry['horse_country']))
                                 .one())
-                        print(horse)
 
                     try:
                         jockey = Jockey(name=entry['jockey_name'])
                         session.add(jockey)
                         session.flush()
+                        print(jockey)
                     except IntegrityError:
                         session.rollback()
                         jockey = (session.query(Jockey)
                                 .filter_by(name=entry['jockey_name'])
                                 .one())
-                        print(jockey)
 
                     entry_db = RaceEntry(race=race_db,
                             last_raced=entry['last_raced'],
@@ -97,6 +98,8 @@ if __name__ == '__main__':
                             weight=entry['weight'],
                             m_e=entry['m_e'],
                             pp=entry['pp'])
+                    if entry['start']:
+                        entry_db.start = entry['start']
                     session.add(entry_db)
                     session.flush()
                     print(entry_db)
