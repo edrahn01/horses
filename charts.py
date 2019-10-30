@@ -214,6 +214,35 @@ class Desc2:
 
         return {'desc2': desc2}
 
+
+FURLONG_DISTANCE = {1: -1,
+        2: .5,
+        3: 1.14,
+        4: 1.36,
+        5: 1.5,
+        6: 1.59,
+        7: 1.82,
+        8: 3.95,
+        9: 2,
+        10: 3.5,
+        11: 5,
+        12: 5.5,
+        13: 6,
+        14: 6.5,
+        15: 7,
+        16: 8,
+        17: 8.18,
+        18: 8.31,
+        19: 9.5,
+        20: 10,
+        21: 9,
+        22: 12,
+        23: 13.5,
+        24: 12,
+        25: 8.5,
+        26: 11,
+        27: 10.5}
+
 class Info2:
     DISTANCE = {'Furlongs': 1,
             'One Hundred And Ten Yards': 2,
@@ -244,33 +273,6 @@ class Info2:
             'One And One Sixteenth Miles': 25,
             'One And Three Eighth Miles': 26,
             'One And Five Sixteenth Miles': 27}
-    FURLONG_DISTANCE = {1: -1,
-            2: .5,
-            3: 1.14,
-            4: 1.36,
-            5: 1.5,
-            6: 1.59,
-            7: 1.82,
-            8: 3.95,
-            9: 2,
-            10: 3.5,
-            11: 5,
-            12: 5.5,
-            13: 6,
-            14: 6.5,
-            15: 7,
-            16: 8,
-            17: 8.18,
-            18: 8.31,
-            19: 9.5,
-            20: 10,
-            21: 9,
-            22: 12,
-            23: 13.5,
-            24: 12,
-            25: 8.5,
-            26: 11,
-            27: 10.5}
     SURFACE = {'Dirt': 0,
             'Inner turf': 1,
             'Outer turf': 2,
@@ -556,7 +558,6 @@ class FixFlaw1:
 class Entries:
     def match(self, race):
         m, race = lift_regex(r'Pgm Horse Name \(Jockey\)\n(.*?)\n\n(.*?)\n\n', race, re.S)
-
         entries = {}
         if m:
             pgms = m.group(1)
