@@ -41,7 +41,7 @@ class Race(Base):
     id = Column(Integer, primary_key=True)
 
     track_id = Column(Integer, ForeignKey('track.id'))
-    track = relationship('Track', back_populates="races")
+    track = relationship('Track', uselist=False, back_populates="races")
     date = Column(Date)
     race_number = Column(Integer)
     race_type = Column(Integer)
@@ -65,7 +65,7 @@ class Race(Base):
 #    start = Column(Integer)
 
     entries = relationship('RaceEntry', back_populates="race")
-    result = relationship('RaceResult', back_populates="race")
+    result = relationship('RaceResult', uselist=False, back_populates="race")
 
     def __repr__(self):
         return "%s - %s - %s"%(self.track, self.date, self.race_number)
@@ -76,7 +76,7 @@ class RaceEntry(Base):
     id = Column(Integer, primary_key=True)
 
     race_id = Column(Integer, ForeignKey('race.id'))
-    race = relationship('Race', back_populates="entries")
+    race = relationship('Race', uselist=False, back_populates="entries")
 
     last_raced = Column(String)
     track_raced = Column(JSON)
@@ -84,16 +84,16 @@ class RaceEntry(Base):
     pgmn = Column(String)
 
     horse_id = Column(Integer, ForeignKey('horse.id'))
-    horse = relationship('Horse', back_populates="entries")
+    horse = relationship('Horse', uselist=False, back_populates="entries")
     jockey_id = Column(Integer, ForeignKey('jockey.id'))
-    jockey = relationship('Jockey', back_populates="entries")
+    jockey = relationship('Jockey', uselist=False, back_populates="entries")
    
     weight = Column(Integer)
     m_e = Column(String)
 
     pp = Column(Integer)
 
-    result = relationship('RaceEntryResult', back_populates="race_entry")
+    result = relationship('RaceEntryResult', uselist=False, back_populates="race_entry")
 
     def __repr__(self):
         return "%s-%s (%s)"%(self.pgmn, self.horse.name, self.jockey.name)
@@ -129,6 +129,14 @@ class Jockey(Base):
         return "%s"%(self.name)
 
 
+POS = {'quick': .1875,
+        'quart': .25,
+        'quack': .375,
+        'half': .5,
+        'last_quart': .75,
+        'mile': 1,
+        'mile_frth': 1.25}
+
 
 class RaceEntryResult(Base):
     __tablename__ = 'race_entry_result'
@@ -136,7 +144,7 @@ class RaceEntryResult(Base):
     id = Column(Integer, primary_key=True)
 
     race_entry_id = Column(Integer, ForeignKey('race_entry.id'))
-    race_entry = relationship('RaceEntry', back_populates="result")
+    race_entry = relationship('RaceEntry', uselist=False, back_populates="result")
 
     start = Column(Integer)
 
@@ -193,13 +201,20 @@ class RaceEntryResult(Base):
         return _str
 
 
+POINT_OF_CALL = {1: 'first',
+                2: 'second',
+                3: 'third',
+                4: 'fourth',
+                5: 'fifth',
+                6: 'final'}
+
 class RaceResult(Base):
     __tablename__ = 'race_result'
 
     id = Column(Integer, primary_key=True)
 
     race_id = Column(Integer, ForeignKey('race.id'))
-    race = relationship('Race', back_populates="result")
+    race = relationship('Race', uselist=False, back_populates="result")
 
     first_call = Column(Integer)
     second_call = Column(Integer)
